@@ -164,5 +164,10 @@ func createArchive(srcDir, archiveTempDir, archiveFinalDir, archiveDestFile stri
 		return fmt.Errorf("error copying archive to artifact directory: %v", err)
 	}
 
+	// Delete temp file from archive temp directory.
+	if err := os.Remove(path.Clean(archivePath)); err != nil {
+		return fmt.Errorf("error deleting temp file: %v", err)
+	}
+
 	return nil
 }
