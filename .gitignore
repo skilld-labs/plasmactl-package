@@ -8,3 +8,4 @@
 *.gen.go
 dist/
 vendor/
+.compose/
