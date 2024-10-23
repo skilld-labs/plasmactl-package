@@ -8,33 +8,26 @@ import (
 	"path/filepath"
 
 	"github.com/launchrctl/launchr"
-	"github.com/launchrctl/launchr/pkg/log"
-	"github.com/spf13/cobra"
 )
 
 func init() {
 	launchr.RegisterPlugin(&Plugin{})
 }
 
-// Plugin is launchr plugin providing bump action.
+// Plugin is [launchr.Plugin] providing package action.
 type Plugin struct{}
 
-// PluginInfo implements launchr.Plugin interface.
+// PluginInfo implements [launchr.Plugin] interface.
 func (p *Plugin) PluginInfo() launchr.PluginInfo {
 	return launchr.PluginInfo{}
 }
 
-// OnAppInit implements launchr.Plugin interface.
-func (p *Plugin) OnAppInit(_ launchr.App) error {
-	return nil
-}
-
-// CobraAddCommands implements launchr.CobraPlugin interface to provide bump functionality.
-func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
-	var pkgCmd = &cobra.Command{
+// CobraAddCommands implements [launchr.CobraPlugin] interface to provide package functionality.
+func (p *Plugin) CobraAddCommands(rootCmd *launchr.Command) error {
+	var pkgCmd = &launchr.Command{
 		Use:   "package",
 		Short: "Creates an archive to contain composed-compiled-propagated artifact",
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *launchr.Command, _ []string) error {
 			// Don't show usage help on a runtime error.
 			cmd.SilenceUsage = true
 
@@ -49,19 +42,25 @@ func (p *Plugin) CobraAddCommands(rootCmd *cobra.Command) error {
 func createArtifact() error {
 	repoName, lastCommitMessage, lastCommitShortSHA, err := getRepoInfo()
 	if err != nil {
-		log.Debug("%s", err)
+		launchr.Log().Error("error", "error", err)
 		return errors.New("error getting repository information")
 	}
 
-	archiveDir := filepath.Join(os.Getenv("HOME"), "artifact")
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	archiveDir := filepath.Join(homeDir, "artifact")
 	artifactDir := ".compose/artifacts"
 	archiveFile := fmt.Sprintf("%s-%s-plasma-src.tar.gz", repoName, lastCommitShortSHA)
 
-	log.Info("REPO_NAME=%s", repoName)
-	log.Info("LAST_COMMIT_MESSAGE=%s", lastCommitMessage)
-	log.Info("LAST_COMMIT_SHORT_SHA=%s", lastCommitShortSHA)
-	log.Info("ARCHIVE_FILE=%s", archiveFile)
-	log.Info("HOME=%s", os.Getenv("HOME"))
+	launchr.Log().Info("initialize artifact",
+		"REPO_NAME", repoName,
+		"LAST_COMMIT_MESSAGE", lastCommitMessage,
+		"LAST_COMMIT_SHORT_SHA", lastCommitShortSHA,
+		"ARCHIVE_FILE", archiveFile,
+		"HOME", homeDir,
+	)
 
 	buildDir := ".compose/build"
 	// ensure ./compose/build exists before archiving it.
@@ -72,12 +71,12 @@ func createArtifact() error {
 		}
 	}
 
-	fmt.Printf("Creating artifact %s/%s...\n", artifactDir, archiveFile)
+	launchr.Term().Printfln("Creating artifact %s/%s...", artifactDir, archiveFile)
 	if err = createArchive(buildDir, archiveDir, artifactDir, archiveFile); err != nil {
-		log.Debug("%v", err)
+		launchr.Log().Error("error", "error", err)
 		return errors.New("error creating archive")
 	}
 
-	fmt.Println("Done")
+	launchr.Term().Success().Println("Done")
 	return nil
 }
