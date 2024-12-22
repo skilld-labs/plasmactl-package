@@ -2,13 +2,19 @@
 package plasmactlpackage
 
 import (
+	"context"
+	_ "embed"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 
 	"github.com/launchrctl/launchr"
+	"github.com/launchrctl/launchr/pkg/action"
 )
+
+//go:embed action.yaml
+var actionYaml []byte
 
 func init() {
 	launchr.RegisterPlugin(&Plugin{})
@@ -22,21 +28,13 @@ func (p *Plugin) PluginInfo() launchr.PluginInfo {
 	return launchr.PluginInfo{}
 }
 
-// CobraAddCommands implements [launchr.CobraPlugin] interface to provide package functionality.
-func (p *Plugin) CobraAddCommands(rootCmd *launchr.Command) error {
-	var pkgCmd = &launchr.Command{
-		Use:   "package",
-		Short: "Creates an archive to contain composed-compiled-propagated artifact",
-		RunE: func(cmd *launchr.Command, _ []string) error {
-			// Don't show usage help on a runtime error.
-			cmd.SilenceUsage = true
-
-			return createArtifact()
-		},
-	}
-
-	rootCmd.AddCommand(pkgCmd)
-	return nil
+// DiscoverActions implements [launchr.ActionDiscoveryPlugin] interface.
+func (p *Plugin) DiscoverActions(_ context.Context) ([]*action.Action, error) {
+	a := action.NewFromYAML("package", actionYaml)
+	a.SetRuntime(action.NewFnRuntime(func(_ context.Context, _ *action.Action) error {
+		return createArtifact()
+	}))
+	return []*action.Action{a}, nil
 }
 
 func createArtifact() error {
