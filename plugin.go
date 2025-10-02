@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/launchrctl/launchr"
 	"github.com/launchrctl/launchr/pkg/action"
@@ -44,11 +43,10 @@ func createArtifact() error {
 		return errors.New("error getting repository information")
 	}
 
-	homeDir, err := os.UserHomeDir()
+	archiveDir, err := os.MkdirTemp("", "archive")
 	if err != nil {
 		return err
 	}
-	archiveDir := filepath.Join(homeDir, "artifact")
 	artifactDir := ".compose/artifacts"
 	archiveFile := fmt.Sprintf("%s-%s-plasma-src.tar.gz", repoName, lastCommitShortSHA)
 
@@ -57,7 +55,7 @@ func createArtifact() error {
 		"LAST_COMMIT_MESSAGE", lastCommitMessage,
 		"LAST_COMMIT_SHORT_SHA", lastCommitShortSHA,
 		"ARCHIVE_FILE", archiveFile,
-		"HOME", homeDir,
+		"TMPDIR", archiveDir,
 	)
 
 	buildDir := ".compose/build"
